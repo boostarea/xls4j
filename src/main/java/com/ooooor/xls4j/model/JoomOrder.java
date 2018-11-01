@@ -1,4 +1,4 @@
-package com.ooooor.exl4j.model;
+package com.ooooor.xls4j.model;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.metadata.BaseRowModel;
