@@ -303,20 +303,16 @@ public class ExcelImportService {
             List<Object> list = Lists.newArrayList(Arrays.copyOf(getCurrentRowData(), getHeaderIndexMap().size()));
 
             Thread thread =
-                    new Thread() {
-
-                        @Override
-                        public void run() {
-                            //处理一行记录
-                            OneLineResultDto result = getDetailImportService().doImport(getHeaderIndexMap(), list, currentLineCount, getImportTrxId());
-                            if (result == null) {
-                                getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_SUCCESS_COUNT, 1L);
-                            } else {
-                                getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_ERROR_COUNT, 1L);
-                                getErrorResultHolder().put(currentLineCount, result);
-                            }
+                    new Thread(() -> {
+                        //处理一行记录
+                        OneLineResultDto result = getDetailImportService().doImport(getHeaderIndexMap(), list, currentLineCount, getImportTrxId());
+                        if (result == null) {
+                            getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_SUCCESS_COUNT, 1L);
+                        } else {
+                            getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_ERROR_COUNT, 1L);
+                            getErrorResultHolder().put(currentLineCount, result);
                         }
-                    };
+                    });
             //放入线程池
             getThreadPool().submit(thread);
         }

@@ -7,6 +7,7 @@ import com.google.common.primitives.Longs;
 import com.ooooor.xls4j.application.dto.AjaxRes;
 import com.ooooor.xls4j.application.dto.ImportResultDto;
 import com.ooooor.xls4j.application.dto.OneLineResultDto;
+import com.ooooor.xls4j.application.service.OutOrderImportServiceImpl;
 import com.ooooor.xls4j.domain.exception.ServiceException;
 import com.ooooor.xls4j.infrastructure.util.ExcelImportService;
 import com.ooooor.xls4j.infrastructure.util.UuidUtil;
@@ -28,7 +29,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.commons.CommonsMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -87,7 +88,6 @@ public class FileAcceptorController {
     public static final String HASH_FIELD_IMPORT_ERROR_COUNT ="importErrorCount";
     public static final String HASH_FIELD_IMPORT_SUCCESS_COUNT ="importSuccessCount";
     public static final String KEY_IMPORT_ERROR_ROWS ="%s_importErrorRows";
-    public static final String HASH_FIELD_HAS_UPLOAD ="has_upload";
     public static final String HASH_FIELD_RESULT_FILE ="resultFile";
 
     public static final String HASH_KEY_IMPORT_PROGRESS_PREFIX ="IMPORTTRX_ID_";
@@ -104,7 +104,7 @@ public class FileAcceptorController {
     protected RedisTemplate<String, String> redisTemplate;
 
     @RequestMapping("upload")
-    public AjaxRes upload(@RequestParam("file")CommonsMultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
+    public AjaxRes upload(@RequestParam("file")MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
         request.setCharacterEncoding("utf-8");
         AjaxRes result = new AjaxRes();
         File tmpFile = null;
@@ -112,7 +112,7 @@ public class FileAcceptorController {
             //获取文件后缀名
             String suffix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".") + 1);
             if (!"XLS".contains(suffix.toLowerCase()) && !XLSX.contains(suffix.toLowerCase())) {
-                result.setMsg("请上传excel表格(xls,xlsx格式)");
+                result.setMsg("请上传excel表格(xls/xlsx格式)");
                 return result;
             }
 
@@ -125,9 +125,10 @@ public class FileAcceptorController {
             }
             //保存临时文件
             file.transferTo(tmpFile);
-            Class importService = detailImportServiceMap.get(importType);
+            // Class importService = detailImportServiceMap.get(importType);
+            Class importService = OutOrderImportServiceImpl.class;
             Optional.ofNullable(importService).orElseThrow(() -> new ServiceException("can not found importHandler: " + importType));
-            String importTrxId = "import" + fileName;
+            String importTrxId = HASH_KEY_IMPORT_PROGRESS_PREFIX + fileName;
             ExcelImportService excelImportService = new ExcelImportService(importService, importTrxId, redisTemplate);
 
             Long totalCount;
@@ -142,7 +143,9 @@ public class FileAcceptorController {
             redisTemplate.opsForHash().put(importTrxId, HASH_FIELD_EXCEL_SUCCESS_COUNT, "0");
 
             //请求参数
-            requestParameterRedisTemplate.opsForValue().set(REQUEST_PARAMETER_KEY + importTrxId, request.getParameterMap());
+            if(null != request.getParameterMap() && request.getParameterMap().size() > 0) {
+                requestParameterRedisTemplate.opsForValue().set(REQUEST_PARAMETER_KEY + importTrxId, request.getParameterMap());
+            }
             //文件保存成功后，返回
             result.setSucceed(importTrxId);
 
@@ -178,7 +181,7 @@ public class FileAcceptorController {
             stopWatch.start();
             ImportResultDto resultDto;
 
-            Class importService = detailImportServiceMap.get(importType);
+            Class importService = OutOrderImportServiceImpl.class;
             Optional.ofNullable(importService).orElseThrow(() -> new ServiceException("can not found importHandler: " + importType));
 
             ExcelImportService excelImportService = new ExcelImportService(importService, importTrxId, redisTemplate, true);
