@@ -64,6 +64,8 @@
         Works with any server-side platform (PHP, Python, Ruby on Rails, Java, Node.js, Go etc.) that supports standard HTML form file uploads.</p>
     </blockquote>
     <br>
+    <textarea id="formData" cols="100"></textarea>
+    <br/>
     <!-- The fileinput-button span is used to style the file input field as button -->
     <span class="btn btn-success fileinput-button">
         <i class="glyphicon glyphicon-plus"></i>
@@ -109,6 +111,7 @@
 /*jslint unparam: true */
 /*global window, $ */
 $(function () {
+    debugger
     'use strict';
     // Change this to the location of your server-side upload handler:
     var url = 'http://localhost:8080/acceptor/upload';
@@ -126,6 +129,11 @@ $(function () {
                 'width',
                 progress + '%'
             );
+        },
+        formData: function (form) {
+            var str = '{"formData": "' + $("#formData").val() + '"}';
+            // return JSON.parse(str);
+            return eval('(' + str + ')');
         }
     }).prop('disabled', !$.support.fileInput)
         .parent().addClass($.support.fileInput ? undefined : 'disabled');

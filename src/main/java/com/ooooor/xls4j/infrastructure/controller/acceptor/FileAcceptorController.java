@@ -98,6 +98,7 @@ public class FileAcceptorController {
     private RedisTemplate<String, OneLineResultDto> redisTemplateForErrorRows;
 
     @Autowired
+    @Qualifier("LineMapRedisTemplate")
     private RedisTemplate<String, Map<String, String[]>> requestParameterRedisTemplate;
 
     @Autowired

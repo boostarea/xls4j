@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericToStringSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.util.Map;
 
@@ -27,21 +25,15 @@ public class RedisConfig {
     @Bean
     @Qualifier("LineResultRedisTemplate")
     RedisTemplate< String, OneLineResultDto> LineResultRedisTemplate() {
-        final RedisTemplate< String, OneLineResultDto > template =  new RedisTemplate< String, OneLineResultDto >();
+        final RedisTemplate< String, OneLineResultDto > template = new RedisTemplate<>();
         template.setConnectionFactory( lettuceConnectionFactory() );
-        template.setKeySerializer( new StringRedisSerializer() );
-        template.setHashValueSerializer( new GenericToStringSerializer< OneLineResultDto >( OneLineResultDto.class ) );
-        template.setValueSerializer( new GenericToStringSerializer< OneLineResultDto >( OneLineResultDto.class ) );
         return template;
     }
     @Bean
-    @Qualifier("LineMaptRedisTemplate")
+    @Qualifier("LineMapRedisTemplate")
     RedisTemplate< String, Map<String, String[]>> LineMaptRedisTemplate() {
-        final RedisTemplate< String, Map<String, String[]> > template =  new RedisTemplate< String, Map<String, String[]> >();
+        final RedisTemplate< String, Map<String, String[]> > template = new RedisTemplate<>();
         template.setConnectionFactory( lettuceConnectionFactory() );
-        template.setKeySerializer( new StringRedisSerializer() );
-        template.setHashValueSerializer( new GenericToStringSerializer< Map >( Map.class ) );
-        template.setValueSerializer( new GenericToStringSerializer< Map >( Map.class ) );
         return template;
     }
 
