@@ -129,14 +129,22 @@ $(function () {
                 'width',
                 progress + '%'
             );
-        },
-        formData: function (form) {
-            var str = '{"formData": "' + $("#formData").val() + '"}';
-            // return JSON.parse(str);
-            return eval('(' + str + ')');
         }
     }).prop('disabled', !$.support.fileInput)
         .parent().addClass($.support.fileInput ? undefined : 'disabled');
+
+
+    $('#fileupload').bind('fileuploadsubmit', function (e, data) {
+        // The example input, doesn't have to be part of the upload form:
+        var input = $('#formData');
+        data.formData = {example: input.val()};
+        if (!data.formData.example) {
+            data.context.find('button').prop('disabled', false);
+            input.focus();
+            return false;
+        }
+    });
+
 });
 </script>
 </body>

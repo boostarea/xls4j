@@ -6,6 +6,7 @@ import com.ooooor.xls4j.infrastructure.controller.acceptor.FileAcceptorControlle
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -24,13 +25,23 @@ public class OutOrderImportServiceImpl implements DetailImportService {
     @Autowired
     protected RedisTemplate<String, String> redisTemplate;
 
+    @Autowired
+    @Qualifier("LineMapRedisTemplate")
+    private RedisTemplate<String, Map<String, String[]>> requestParameterRedisTemplate;
+
     @Override
     public OneLineResultDto doImport(Map<String, Integer> headerIndexMap, List<Object> currentRowData, Long currentRowNum,
                                      String importTrxId) {
         try {
-            headerIndexMap.keySet();
-            redisTemplate.opsForHash().increment(importTrxId, FileAcceptorController.HASH_FIELD_IMPORT_SUCCESS_COUNT,
-                    1L);
+            redisTemplate.opsForHash().increment(importTrxId, FileAcceptorController.HASH_FIELD_IMPORT_SUCCESS_COUNT, 1L);
+
+            Map<String, String[]> parameterMapper = requestParameterRedisTemplate.opsForValue().get(FileAcceptorController.REQUEST_PARAMETER_KEY + importTrxId);
+            String statement = parameterMapper.values().stream().findFirst().orElse(new String[]{""})[0];
+
+            String replaceStr = statement.replaceAll("\\$", "\\%s");
+            String format = String.format(replaceStr, currentRowData.toArray());
+            System.out.println(format);
+
             // currentRowData.get(headerIndexMap.get("出库单号"));
         } catch (Exception e) {
             logger.error("导入第" + currentRowNum + "行物流单号" + currentRowData + "异常：" + e.getMessage(), e);

@@ -32,7 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -247,6 +251,30 @@ public class FileAcceptorController {
             }catch(Exception e) {
                 logger.error(e.getMessage(), e);
             }
+        }
+    }
+
+    @RequestMapping("downloadImportResult")
+    public void downloadImportResult(String fileName, HttpServletResponse response) throws IOException {
+        File resultFile = new File(System.getProperty("java.io.tmpdir") + File.separator + fileName);
+
+        writeToResponse(response, resultFile);
+    }
+
+    private void writeToResponse(HttpServletResponse response, File file) throws IOException {
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+             BufferedOutputStream bos = new BufferedOutputStream(response.getOutputStream())) {
+            // 设置response参数，可以打开下载页面
+            response.reset();
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename="+ new String(file.getName().getBytes(), "UTF-8"));
+
+            byte[] buff = new byte[8192];
+            int bytesRead;
+            while (-1 != (bytesRead = bis.read(buff, 0, buff.length))) {
+                bos.write(buff, 0, bytesRead);
+            }
+            bos.flush();
         }
     }
 
