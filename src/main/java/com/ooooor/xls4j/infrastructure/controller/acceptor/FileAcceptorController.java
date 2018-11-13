@@ -13,14 +13,6 @@ import com.ooooor.xls4j.infrastructure.util.ExcelImportService;
 import com.ooooor.xls4j.infrastructure.util.UuidUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.time.StopWatch;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.xssf.streaming.SXSSFCell;
-import org.apache.poi.xssf.streaming.SXSSFRow;
-import org.apache.poi.xssf.streaming.SXSSFSheet;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,56 +52,47 @@ import java.util.TreeSet;
 @RequestMapping("acceptor")
 public class FileAcceptorController {
 
-    private Logger logger = LoggerFactory.getLogger(FileAcceptorController.class);
-
-    private static final String XLS = "xls";
-
-    private static final String XLSX = "xlsx";
-
-    protected final Map<String, Class> detailImportServiceMap = Maps.newConcurrentMap();
     /**
      * 导入源文件名
      */
-    public static final String HASH_FIELD_EXCEL_SOURCE_FILE ="sourceFile";
+    public static final String HASH_FIELD_EXCEL_SOURCE_FILE = "sourceFile";
     /**
      * EXCEL导入总行数（包含表头）
      */
-    public static final String HASH_FIELD_EXCEL_TOTAL_COUNT ="excelTotalCount";
+    public static final String HASH_FIELD_EXCEL_TOTAL_COUNT = "excelTotalCount";
     /**
      * EXCEL导入校验错误的行数
      */
-    public static final String HASH_FIELD_EXCEL_ERROR_COUNT ="excelErrorCount";
+    public static final String HASH_FIELD_EXCEL_ERROR_COUNT = "excelErrorCount";
     /**
      * EXCEL导入校验通过的行数
      */
-    public static final String HASH_FIELD_EXCEL_SUCCESS_COUNT ="excelSuccessCount";
+    public static final String HASH_FIELD_EXCEL_SUCCESS_COUNT = "excelSuccessCount";
     /**
      * 请求参数
      */
-    public static final String REQUEST_PARAMETER_KEY ="requestParameter";
-
-    public static final String HASH_FIELD_IMPORT_TOTAL_COUNT ="importTotalCount";
-    public static final String HASH_FIELD_IMPORT_ERROR_COUNT ="importErrorCount";
-    public static final String HASH_FIELD_IMPORT_SUCCESS_COUNT ="importSuccessCount";
-    public static final String KEY_IMPORT_ERROR_ROWS ="%s_importErrorRows";
-    public static final String HASH_FIELD_RESULT_FILE ="resultFile";
-
-    public static final String HASH_KEY_IMPORT_PROGRESS_PREFIX ="IMPORTTRX_ID_";
-
-
+    public static final String REQUEST_PARAMETER_KEY = "requestParameter";
+    public static final String HASH_FIELD_IMPORT_TOTAL_COUNT = "importTotalCount";
+    public static final String HASH_FIELD_IMPORT_ERROR_COUNT = "importErrorCount";
+    public static final String HASH_FIELD_IMPORT_SUCCESS_COUNT = "importSuccessCount";
+    public static final String KEY_IMPORT_ERROR_ROWS = "%s_importErrorRows";
+    public static final String HASH_FIELD_RESULT_FILE = "resultFile";
+    public static final String HASH_KEY_IMPORT_PROGRESS_PREFIX = "IMPORTTRX_ID_";
+    private static final String XLS = "xls";
+    private static final String XLSX = "xlsx";
+    protected final Map<String, Class> detailImportServiceMap = Maps.newConcurrentMap();
+    @Autowired
+    protected RedisTemplate<String, String> redisTemplate;
+    private Logger logger = LoggerFactory.getLogger(FileAcceptorController.class);
     @Qualifier("LineResultRedisTemplate")
     @Autowired
     private RedisTemplate<String, OneLineResultDto> redisTemplateForErrorRows;
-
     @Autowired
     @Qualifier("LineMapRedisTemplate")
     private RedisTemplate<String, Map<String, String[]>> requestParameterRedisTemplate;
 
-    @Autowired
-    protected RedisTemplate<String, String> redisTemplate;
-
     @RequestMapping("upload")
-    public AjaxRes upload(@RequestParam("file")MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
+    public AjaxRes upload(@RequestParam("file") MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
         request.setCharacterEncoding("utf-8");
         AjaxRes result = new AjaxRes();
         File tmpFile = null;
@@ -148,7 +131,7 @@ public class FileAcceptorController {
             redisTemplate.opsForHash().put(importTrxId, HASH_FIELD_EXCEL_SUCCESS_COUNT, "0");
 
             //请求参数
-            if(null != request.getParameterMap() && request.getParameterMap().size() > 0) {
+            if (null != request.getParameterMap() && request.getParameterMap().size() > 0) {
                 requestParameterRedisTemplate.opsForValue().set(REQUEST_PARAMETER_KEY + importTrxId, request.getParameterMap());
             }
             //文件保存成功后，返回
@@ -165,95 +148,6 @@ public class FileAcceptorController {
         }
     }
 
-
-    class ExcelParseThread extends Thread {
-
-        private String importType;
-
-        private File tmpFile;
-
-        private String importTrxId;
-
-        public ExcelParseThread(String importType, File tmpFile, String importTrxId) {
-            this.importType = importType;
-            this.tmpFile = tmpFile;
-            this.importTrxId = importTrxId;
-        }
-
-        @Override
-        public void run() {
-            StopWatch stopWatch = new StopWatch();
-            stopWatch.start();
-            ImportResultDto resultDto;
-
-            Class importService = OutOrderImportServiceImpl.class;
-            Optional.ofNullable(importService).orElseThrow(() -> new ServiceException("can not found importHandler: " + importType));
-
-            ExcelImportService excelImportService = new ExcelImportService(importService, importTrxId, redisTemplate, true);
-            String suffix = tmpFile.getName().substring(tmpFile.getName().lastIndexOf(".") + 1);
-
-            try {
-                if (XLS.contains(suffix.toLowerCase())) {
-                    resultDto = excelImportService.processXls(tmpFile.getAbsolutePath());
-                } else {
-                    resultDto = excelImportService.processXlsx(tmpFile.getAbsolutePath());
-                }
-                stopWatch.stop();
-                logger.info("解析验证excel超作耗时：" + stopWatch.getTime());
-                while(true) {
-
-                    List<Object> allCounts =
-                            redisTemplate.opsForHash().multiGet(importTrxId, Lists.newArrayList(HASH_FIELD_IMPORT_SUCCESS_COUNT,
-                                    HASH_FIELD_IMPORT_ERROR_COUNT, HASH_FIELD_IMPORT_TOTAL_COUNT));
-
-                    long successCount = Longs.tryParse(Objects.toString(allCounts.get(0), "0"));
-                    long errorCount = Longs.tryParse(Objects.toString(allCounts.get(1), "0"));
-                    long totalCount = Longs.tryParse(Objects.toString(allCounts.get(2), "0"));
-
-                    if(successCount + errorCount >= totalCount) {
-                        break;
-                    }
-                    Thread.sleep(2*1000);
-                }
-                String errorRowsKey = String.format(KEY_IMPORT_ERROR_ROWS, importTrxId);
-
-                List<OneLineResultDto> lineResultDtoList = redisTemplateForErrorRows.opsForList().range(errorRowsKey, 0, -1);
-
-                if(CollectionUtils.isNotEmpty(lineResultDtoList)) {
-                    Set<OneLineResultDto> errorLineSet = new TreeSet<OneLineResultDto>(Comparator.comparing(OneLineResultDto::getLineNum));
-
-                    lineResultDtoList.forEach(errorLine ->
-                            errorLineSet.add(errorLine)
-                    );
-                    if(CollectionUtils.isNotEmpty(resultDto.getErrorLines())) {
-                        resultDto.getErrorLines().forEach(errorLine ->
-                                errorLineSet.add(errorLine)
-                        );
-                    }
-                    resultDto.setErrorLines(Lists.newArrayList(errorLineSet));
-                }
-
-                //导入结果excel
-                String fileName = Splitter.on(HASH_KEY_IMPORT_PROGRESS_PREFIX).splitToList(importTrxId).get(1);
-                File resultFile = new File(tmpFile.getParentFile(), "importResult_" + fileName + "ct" + stopWatch.getTime() + "." + suffix);
-                stopWatch.reset();
-                stopWatch.start();
-                try (FileOutputStream fileOutputStream = new FileOutputStream(resultFile)) {
-                    writeToFile(resultDto, fileOutputStream);
-                    redisTemplate.opsForHash().put(importTrxId, HASH_FIELD_RESULT_FILE, resultFile.getName());
-                }
-                stopWatch.stop();
-                logger.info("生成导入结果excel超作耗时：" + stopWatch.getTime());
-                redisTemplateForErrorRows.delete(errorRowsKey);
-                //请求参数
-                requestParameterRedisTemplate.delete(REQUEST_PARAMETER_KEY + importTrxId);
-
-            }catch(Exception e) {
-                logger.error(e.getMessage(), e);
-            }
-        }
-    }
-
     @RequestMapping("downloadImportResult")
     public void downloadImportResult(String fileName, HttpServletResponse response) throws IOException {
         File resultFile = new File(System.getProperty("java.io.tmpdir") + File.separator + fileName);
@@ -267,7 +161,7 @@ public class FileAcceptorController {
             // 设置response参数，可以打开下载页面
             response.reset();
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
-            response.setHeader("Content-Disposition", "attachment;filename="+ new String(file.getName().getBytes(), "UTF-8"));
+            response.setHeader("Content-Disposition", "attachment;filename=" + new String(file.getName().getBytes(), "UTF-8"));
 
             byte[] buff = new byte[8192];
             int bytesRead;
@@ -279,7 +173,17 @@ public class FileAcceptorController {
     }
 
     protected void writeToFile(ImportResultDto resultDto, OutputStream out) throws IOException {
-        try (SXSSFWorkbook workbook = new SXSSFWorkbook(resultDto.getErrorLines().size() + 1)) {
+        try (BufferedOutputStream stream = new BufferedOutputStream(out)) {
+            resultDto.getErrorLines().forEach(f -> {
+                try {
+                    stream.write(f.getResult().getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            });
+        }
+        /*try (SXSSFWorkbook workbook = new SXSSFWorkbook(resultDto.getErrorLines().size() + 1)) {
             // 声明一个工作薄
             workbook.setCompressTempFiles(true);
             // 列头样式
@@ -347,6 +251,94 @@ public class FileAcceptorController {
             }
 
             workbook.write(out);
+        }*/
+    }
+
+    class ExcelParseThread extends Thread {
+
+        private String importType;
+
+        private File tmpFile;
+
+        private String importTrxId;
+
+        public ExcelParseThread(String importType, File tmpFile, String importTrxId) {
+            this.importType = importType;
+            this.tmpFile = tmpFile;
+            this.importTrxId = importTrxId;
+        }
+
+        @Override
+        public void run() {
+            StopWatch stopWatch = new StopWatch();
+            stopWatch.start();
+            ImportResultDto resultDto;
+
+            Class importService = OutOrderImportServiceImpl.class;
+            Optional.ofNullable(importService).orElseThrow(() -> new ServiceException("can not found importHandler: " + importType));
+
+            ExcelImportService excelImportService = new ExcelImportService(importService, importTrxId, redisTemplate, true);
+            String suffix = tmpFile.getName().substring(tmpFile.getName().lastIndexOf(".") + 1);
+
+            try {
+                if (XLS.contains(suffix.toLowerCase())) {
+                    resultDto = excelImportService.processXls(tmpFile.getAbsolutePath());
+                } else {
+                    resultDto = excelImportService.processXlsx(tmpFile.getAbsolutePath());
+                }
+                stopWatch.stop();
+                logger.info("解析验证excel超作耗时：" + stopWatch.getTime());
+                while (true) {
+
+                    List<Object> allCounts =
+                            redisTemplate.opsForHash().multiGet(importTrxId, Lists.newArrayList(HASH_FIELD_IMPORT_SUCCESS_COUNT,
+                                    HASH_FIELD_IMPORT_ERROR_COUNT, HASH_FIELD_IMPORT_TOTAL_COUNT));
+
+                    long successCount = Longs.tryParse(Objects.toString(allCounts.get(0), "0"));
+                    long errorCount = Longs.tryParse(Objects.toString(allCounts.get(1), "0"));
+                    long totalCount = Longs.tryParse(Objects.toString(allCounts.get(2), "0"));
+
+                    if (successCount + errorCount >= totalCount) {
+                        break;
+                    }
+                    Thread.sleep(2 * 1000);
+                }
+                String errorRowsKey = String.format(KEY_IMPORT_ERROR_ROWS, importTrxId);
+
+                List<OneLineResultDto> lineResultDtoList = redisTemplateForErrorRows.opsForList().range(errorRowsKey, 0, -1);
+
+                if (CollectionUtils.isNotEmpty(lineResultDtoList)) {
+                    Set<OneLineResultDto> errorLineSet = new TreeSet<OneLineResultDto>(Comparator.comparing(OneLineResultDto::getLineNum));
+
+                    lineResultDtoList.forEach(errorLine ->
+                            errorLineSet.add(errorLine)
+                    );
+                    if (CollectionUtils.isNotEmpty(resultDto.getErrorLines())) {
+                        resultDto.getErrorLines().forEach(errorLine ->
+                                errorLineSet.add(errorLine)
+                        );
+                    }
+                    resultDto.setErrorLines(Lists.newArrayList(errorLineSet));
+                }
+
+                //导入结果excel
+                String fileName = Splitter.on(HASH_KEY_IMPORT_PROGRESS_PREFIX).splitToList(importTrxId).get(1);
+                File resultFile = new File(tmpFile.getParentFile(), "importResult_" + fileName + "ct" + stopWatch.getTime() + ".sql");
+                stopWatch.reset();
+                stopWatch.start();
+                try (FileOutputStream fileOutputStream = new FileOutputStream(resultFile, true)) {
+                    writeToFile(resultDto, fileOutputStream);
+                    redisTemplate.opsForHash().put(importTrxId, HASH_FIELD_RESULT_FILE, resultFile.getName());
+                }
+                stopWatch.stop();
+                logger.info("生成导入结果excel超作耗时：" + stopWatch.getTime());
+                redisTemplateForErrorRows.delete(errorRowsKey);
+                //请求参数
+                requestParameterRedisTemplate.delete(REQUEST_PARAMETER_KEY + importTrxId);
+
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            }
         }
     }
 }

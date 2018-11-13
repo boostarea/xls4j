@@ -14,4 +14,5 @@ public class OneLineResultDto implements Serializable{
     private List<Object> lineData;
     /**异常信息*/
     private String errMsg;
+    private String result;
 }

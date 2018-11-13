@@ -42,12 +42,12 @@ public class OutOrderImportServiceImpl implements DetailImportService {
             String format = String.format(replaceStr, currentRowData.toArray());
             System.out.println(format);
 
+            return getOneLineResultDto(currentRowData, currentRowNum, null, format);
             // currentRowData.get(headerIndexMap.get("出库单号"));
         } catch (Exception e) {
             logger.error("导入第" + currentRowNum + "行物流单号" + currentRowData + "异常：" + e.getMessage(), e);
             return getOneLineResultDto(currentRowData, currentRowNum, getExceptionMsg(e));
         }
-        return null;
     }
 
     private String getExceptionMsg(Exception e) {
@@ -66,4 +66,12 @@ public class OutOrderImportServiceImpl implements DetailImportService {
         return resultDto;
     }
 
+    private OneLineResultDto getOneLineResultDto(List<Object> currentRowData, Long currentRowNum, String message, String result) {
+        OneLineResultDto resultDto = new OneLineResultDto();
+        resultDto.setErrMsg(message);
+        resultDto.setLineData(currentRowData);
+        resultDto.setLineNum(currentRowNum);
+        resultDto.setResult(result);
+        return resultDto;
+    }
 }

@@ -306,11 +306,12 @@ public class ExcelImportService {
                     new Thread(() -> {
                         //处理一行记录
                         OneLineResultDto result = getDetailImportService().doImport(getHeaderIndexMap(), list, currentLineCount, getImportTrxId());
-                        if (result == null) {
+                        if (null != result && StringUtils.isNotBlank(result.getResult())) {
                             getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_SUCCESS_COUNT, 1L);
+                            getErrorResultHolder().put(currentLineCount, result);
                         } else {
                             getRedisTemplate().opsForHash().increment(getImportTrxId(), FileAcceptorController.HASH_FIELD_EXCEL_ERROR_COUNT, 1L);
-                            getErrorResultHolder().put(currentLineCount, result);
+                            // getErrorResultHolder().put(currentLineCount, result);
                         }
                     });
             //放入线程池
