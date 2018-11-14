@@ -39,10 +39,10 @@ public class OutOrderImportServiceImpl implements DetailImportService {
             String statement = parameterMapper.values().stream().findFirst().orElse(new String[]{""})[0];
 
             String replaceStr = statement.replaceAll("\\$", "\\%s");
-            String format = String.format(replaceStr, currentRowData.toArray());
-            System.out.println(format);
+            String format = String.format(replaceStr + "\n", currentRowData.toArray());
+            System.out.println(format );
 
-            return getOneLineResultDto(currentRowData, currentRowNum, null, format);
+            return getOneLineResultDto(currentRowData, currentRowNum, null, format );
             // currentRowData.get(headerIndexMap.get("出库单号"));
         } catch (Exception e) {
             logger.error("导入第" + currentRowNum + "行物流单号" + currentRowData + "异常：" + e.getMessage(), e);
