@@ -92,7 +92,7 @@ public class FileAcceptorController {
     private RedisTemplate<String, Map<String, String[]>> requestParameterRedisTemplate;
 
     @RequestMapping("upload")
-    public AjaxRes upload(@RequestParam("file") MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
+    public  AjaxRes upload(@RequestParam("file") MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
         request.setCharacterEncoding("utf-8");
         AjaxRes result = new AjaxRes();
         File tmpFile = null;
@@ -149,7 +149,7 @@ public class FileAcceptorController {
     }
 
     @RequestMapping("downloadImportResult")
-    public void downloadImportResult(String fileName, HttpServletResponse response) throws IOException {
+    public void downloadImportResult(@RequestParam("fileName") String fileName, HttpServletResponse response) throws IOException {
         File resultFile = new File(System.getProperty("java.io.tmpdir") + File.separator + fileName);
 
         writeToResponse(response, resultFile);
@@ -323,7 +323,8 @@ public class FileAcceptorController {
 
                 //导入结果excel
                 String fileName = Splitter.on(HASH_KEY_IMPORT_PROGRESS_PREFIX).splitToList(importTrxId).get(1);
-                File resultFile = new File(tmpFile.getParentFile(), "importResult_" + fileName + "ct" + stopWatch.getTime() + ".sql");
+                // File resultFile = new File(tmpFile.getParentFile(), "importResult_" + fileName + "ct" + stopWatch.getTime() + ".sql");
+                File resultFile = new File(tmpFile.getParentFile(), importTrxId + ".sql");
                 stopWatch.reset();
                 stopWatch.start();
                 try (FileOutputStream fileOutputStream = new FileOutputStream(resultFile, true)) {
