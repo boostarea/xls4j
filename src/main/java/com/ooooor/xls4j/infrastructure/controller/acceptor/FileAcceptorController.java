@@ -21,6 +21,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -92,16 +93,19 @@ public class FileAcceptorController {
     private RedisTemplate<String, Map<String, String[]>> requestParameterRedisTemplate;
 
     @RequestMapping("upload")
-    public  AjaxRes upload(@RequestParam("file") MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
+    public DeferredResult<AjaxRes> upload(@RequestParam("file") MultipartFile file, HttpServletRequest request, String importType) throws UnsupportedEncodingException {
         request.setCharacterEncoding("utf-8");
-        AjaxRes result = new AjaxRes();
+        DeferredResult<AjaxRes> deferredResult = new DeferredResult<>();
+
         File tmpFile = null;
         try {
             //获取文件后缀名
             String suffix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".") + 1);
             if (!"XLS".contains(suffix.toLowerCase()) && !XLSX.contains(suffix.toLowerCase())) {
+                AjaxRes result = new AjaxRes();
                 result.setMsg("请上传excel表格(xls/xlsx格式)");
-                return result;
+                deferredResult.setResult(result);
+                return deferredResult;
             }
 
             String realPath = System.getProperty("java.io.tmpdir");
@@ -135,16 +139,17 @@ public class FileAcceptorController {
                 requestParameterRedisTemplate.opsForValue().set(REQUEST_PARAMETER_KEY + importTrxId, request.getParameterMap());
             }
             //文件保存成功后，返回
-            result.setSucceed(importTrxId);
 
-            new ExcelParseThread(importType, tmpFile, importTrxId).start();
+            new ExcelParseThread(importType, tmpFile, importTrxId, deferredResult).start();
 
-            return result;
+            return deferredResult;
 
         } catch (Exception e) {
             logger.error("导入excel出错:" + e.getMessage(), e);
+            AjaxRes result = new AjaxRes();
             result.setMsg("导入excel出错: " + e.getMessage());
-            return result;
+            deferredResult.setResult(result);
+            return deferredResult;
         }
     }
 
@@ -262,10 +267,13 @@ public class FileAcceptorController {
 
         private String importTrxId;
 
-        public ExcelParseThread(String importType, File tmpFile, String importTrxId) {
+        private DeferredResult<AjaxRes> deferredResult;
+
+        public ExcelParseThread(String importType, File tmpFile, String importTrxId, DeferredResult<AjaxRes> deferredResult) {
             this.importType = importType;
             this.tmpFile = tmpFile;
             this.importTrxId = importTrxId;
+            this.deferredResult = deferredResult;
         }
 
         @Override
@@ -336,6 +344,10 @@ public class FileAcceptorController {
                 redisTemplateForErrorRows.delete(errorRowsKey);
                 //请求参数
                 requestParameterRedisTemplate.delete(REQUEST_PARAMETER_KEY + importTrxId);
+
+                AjaxRes result = new AjaxRes();
+                result.setSucceed(importTrxId);
+                deferredResult.setResult(result);
 
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
