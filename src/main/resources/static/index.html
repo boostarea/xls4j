@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Kendo UI &hearts; Twitter Bootstrap: Responsive demo</title>
+        <title>upload</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
         <link rel="stylesheet" href="vendor/bootstrap.min.css" />
@@ -111,12 +111,28 @@
                 'use strict';
                 debugger
                 // Change this to the location of your server-side upload handler:
-                var url = 'http://localhost:8080/acceptor/upload';
+
+                var ori_url;
+                var url = window.location.search.match(/url=([^&]+)/);
+                var pathname = window.location.pathname;
+                if (url && url.length > 1) {
+                    url = decodeURIComponent(url[1]);
+                } else if (!!pathname) {
+                    var pathArray = pathname.split('/');
+                    if(pathArray.length > 1) {
+                        ori_url = window.location.origin + "/" + pathArray[1] + '/acceptor';
+                        url = ori_url + '/upload';
+                    }
+                }else {
+                    ori_url = window.location.origin + '/acceptor';
+                    url = ori_url + "/upload";
+                }
+
                 $('#fileupload').fileupload({
                     url: url,
                     dataType: 'json',
                     done: function (e, data) {
-                        window.open("http://localhost:8080/acceptor/downloadImportResult?fileName=" + data.result.obj + ".sql");
+                        window.open(ori_url + "/downloadImportResult?fileName=" + data.result.obj + ".sql");
                     },
                     progressall: function (e, data) {
                         // var progress = parseInt(data.loaded / data.total * 100, 10);
