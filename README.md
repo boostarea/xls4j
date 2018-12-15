@@ -4,7 +4,7 @@
 
 
 
-Xls4j (批量数据处理) 能处理紧急数据处理需求. 能够根据excel文件,生成大批量的指定sql语句, 并且具备拆分大型excel文件的能力.
+Xls4j (大批量数据处理) 能处理紧急数据处理需求. 能够根据excel文件,生成大批量的指定sql语句, 并且具备拆分大型excel文件的能力.
 
 基于Spring Boot和Apache poi开发,打包后可直接运行,不需额外安装应用容器.
 
@@ -14,19 +14,23 @@ Xls4j (批量数据处理) 能处理紧急数据处理需求. 能够根据excel�
 
 # Screenshots
 
-![运行页面](xls4j/src/main/resources/static/img/screenshot.png)
+![运行页面](https://raw.githubusercontent.com/wiki/ooooor/siren/screenshot.png)
 
 # Features
-
 * **自定义SQL语句,根据excel大批量生成**
-  * 在apache poi之上, 针对io流进行封装,解析/写入excel速度明显提升.
+  * 在apache poi之上, 针对io流进行封装,解析/写入excel速度明显提升。
+
 * **快速生成结果(高并发) **
-  * 线程间通讯,(v1.0.0使用Redis) v1.0.1后,将全面使用Spring自带Cache的ConcurrentMap进行管理;
+  * 线程间通讯,(v1.0.0使用Redis) v1.0.1后,将全面使用Spring自带Cache的ConcurrentMap进行管理。
   * 实现框架的对外部依赖尽可能少,部署非常简单,只需jar包即可运行.
+
 * **历史回溯功能**
-  * 可以方便的找回已生成的文件(默认数量:50)
+  * 可以方便的找回已生成的文件(默认数量:50)。
+
 * **支持大文件的拆分**
-* **支持Docker镜像部署**
+
+* **支持Docker镜像部署*
+
 * **源码完全开源**
 
 # Usage
@@ -40,5 +44,5 @@ Xls4j (批量数据处理) 能处理紧急数据处理需求. 能够根据excel�
 # Support 
 
 # Contribution
-  * Source Code: https://github.com/ctripcorp/apollo
-  * Issue Tracker: https://github.com/ctripcorp/apollo/issues
+  * Source Code: https://github.com/ooooor/xls4j
+  * Issue Tracker: https://github.com/ooooor/xls4j/issues
