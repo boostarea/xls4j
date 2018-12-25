@@ -34,6 +34,9 @@ Xls4j (大批量数据处理) 能处理紧急数据处理需求. 能够根据exc
 * **源码完全开源**
 
 # Usage
+  ```text
+nohup java -jar /data/projects/xls4j/exl4j-1.0-SNAPSHOT.jar > /data/log/xls4j/xls4j.log 2>&1 &
+```
 
 # Design
 
